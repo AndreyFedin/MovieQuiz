@@ -5,12 +5,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
     
+    private lazy var statisticService: StatisticServiceProtocol = StatisticService()
+    
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
     
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
+    
+    private var alertPresenter = AlertPresenter()
+   
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -68,7 +73,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showAnswerResult(isCorrect: Bool) {
-        
         if isCorrect {
             correctAnswers += 1
         }
@@ -101,25 +105,36 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
-    private func show(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            guard let self = self else {return}
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
-            
-            self.questionFactory?.requestNextQuestion()
+    func show(quiz result: QuizResultsViewModel) {
+        let message = makeResultsMessage()
+        let model = AlertModel(title: result.title, message: message, buttonText: result.buttonText) { [weak self] in
+            guard let self = self else { return }
+            restartGame()
         }
         
-        alert.addAction(action)
-        
-        present(alert, animated: true, completion: nil)
+        alertPresenter.show(in: self, model: model)
+    }
+
+    func makeResultsMessage() -> String {
+        statisticService.store(correct: correctAnswers, total: questionsAmount)
+        let currentRecord = "\(statisticService.bestGame.bestGameCorrect)/\(statisticService.bestGame.bestGameTotal)"
+        let totalCount = "\(statisticService.gamesCount)"
+        let recordTime = statisticService.bestGame.bestGameDate.dateTimeString
+        let accuracy = String(format: "%.2f", statisticService.totalAccuracy)
+        let text = """
+            Ваш результат: \(correctAnswers)/\(questionsAmount)
+            Количество сыгранных квизов: \(totalCount)
+            Рекорд: \(currentRecord) (\(recordTime))
+            Средняя точность: \(accuracy)%
+            """
+        return text
     }
     
-    
+    private func restartGame() {
+        currentQuestionIndex = 0
+        correctAnswers = 0
+        imageView.layer.borderWidth = 0
+        questionFactory?.requestNextQuestion()
+    }
 }
 
