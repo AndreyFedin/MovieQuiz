@@ -1,9 +1,11 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
-    @IBOutlet private var imageView: UIImageView!
-    @IBOutlet private var textLabel: UILabel!
-    @IBOutlet private var counterLabel: UILabel!
+    @IBOutlet weak private var imageView: UIImageView!
+    @IBOutlet weak private var textLabel: UILabel!
+    @IBOutlet weak private var counterLabel: UILabel!
+    
+    private lazy var statisticService: StatisticServiceProtocol = StatisticService()
     
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
@@ -12,15 +14,20 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     
+    private var alertPresenter = AlertPresenter()
+    
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        
-        questionFactory.requestNextQuestion()
+        setupQuestionFactory()
+    }
+    
+    private func setupQuestionFactory() {
+        let factory = QuestionFactory()
+        factory.delegate = self
+        questionFactory = factory
+        factory.requestNextQuestion()
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -68,7 +75,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showAnswerResult(isCorrect: Bool) {
-        
         if isCorrect {
             correctAnswers += 1
         }
@@ -101,25 +107,39 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
-    private func show(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            guard let self = self else {return}
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
-            
-            self.questionFactory?.requestNextQuestion()
+    func show(quiz result: QuizResultsViewModel) {
+        let message = makeResultsMessage()
+        let model = AlertModel(title: result.title, message: message, buttonText: result.buttonText) { [weak self] in
+            guard let self = self else { return }
+            restartGame()
         }
         
-        alert.addAction(action)
-        
-        present(alert, animated: true, completion: nil)
+        alertPresenter.show(in: self, model: model)
     }
     
+    private func makeResultsMessage() -> String {
+        statisticService.store(correct: correctAnswers, total: questionsAmount)
+        
+        let bestGame = statisticService.bestGame
+        let currentGameScore = "\(correctAnswers)/\(questionsAmount)"
+        let bestGameScore = "\(bestGame.bestGameCorrect)/\(bestGame.bestGameTotal)"
+        let bestGameDate = bestGame.bestGameDate.dateTimeString
+        let gamesCount = statisticService.gamesCount
+        let accuracy = String(format: "%.2f", statisticService.totalAccuracy)
+        
+        return """
+        Ваш результат: \(currentGameScore)
+        Количество сыгранных квизов: \(gamesCount)
+        Рекорд: \(bestGameScore) (\(bestGameDate))
+        Средняя точность: \(accuracy)%
+        """
+    }
     
+    private func restartGame() {
+        currentQuestionIndex = 0
+        correctAnswers = 0
+        imageView.layer.borderWidth = 0
+        questionFactory?.requestNextQuestion()
+    }
 }
 
