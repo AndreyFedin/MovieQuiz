@@ -9,26 +9,7 @@ import Foundation
 
 final class StatisticService: StatisticServiceProtocol {
     
-    private enum Keys: String {
-        case gamesCount          // Для счётчика сыгранных игр
-        case bestGameCorrect     // Для количества правильных ответов в лучшей игре
-        case bestGameTotal       // Для общего количества вопросов в лучшей игре
-        case bestGameDate        // Для даты лучшей игры
-        case totalCorrectAnswers // Для общего количества правильных ответов за все игры
-        case totalQuestionsAsked // Для общего количества вопросов, заданных за все игры
-    }
-    
     private let storage: UserDefaults = .standard
-    
-    private var totalCorrectAnswers: Int {
-        get { storage.integer(forKey: Keys.totalCorrectAnswers.rawValue) }
-        set { storage.set(newValue, forKey: Keys.totalCorrectAnswers.rawValue) }
-    }
-    
-    private var totalQuestionsAsked: Int {
-        get { storage.integer(forKey: Keys.totalQuestionsAsked.rawValue) }
-        set { storage.set(newValue, forKey: Keys.totalQuestionsAsked.rawValue) }
-    }
     
     internal var gamesCount: Int {
         get { storage.integer(forKey: Keys.gamesCount.rawValue) }
@@ -66,5 +47,24 @@ final class StatisticService: StatisticServiceProtocol {
         if newBestGame.isBetterThan(bestGame) {
             bestGame = newBestGame
         }
+    }
+    
+    private enum Keys: String {
+        case gamesCount
+        case bestGameCorrect
+        case bestGameTotal
+        case bestGameDate
+        case totalCorrectAnswers
+        case totalQuestionsAsked
+    }
+    
+    private var totalCorrectAnswers: Int {
+        get { storage.integer(forKey: Keys.totalCorrectAnswers.rawValue) }
+        set { storage.set(newValue, forKey: Keys.totalCorrectAnswers.rawValue) }
+    }
+    
+    private var totalQuestionsAsked: Int {
+        get { storage.integer(forKey: Keys.totalQuestionsAsked.rawValue) }
+        set { storage.set(newValue, forKey: Keys.totalQuestionsAsked.rawValue) }
     }
 }

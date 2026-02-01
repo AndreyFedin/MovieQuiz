@@ -1,9 +1,9 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
-    @IBOutlet private var imageView: UIImageView!
-    @IBOutlet private var textLabel: UILabel!
-    @IBOutlet private var counterLabel: UILabel!
+    @IBOutlet weak private var imageView: UIImageView!
+    @IBOutlet weak private var textLabel: UILabel!
+    @IBOutlet weak private var counterLabel: UILabel!
     
     private lazy var statisticService: StatisticServiceProtocol = StatisticService()
     
@@ -15,17 +15,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var correctAnswers = 0
     
     private var alertPresenter = AlertPresenter()
-   
+    
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        
-        questionFactory.requestNextQuestion()
+        setupQuestionFactory()
+    }
+    
+    private func setupQuestionFactory() {
+        let factory = QuestionFactory()
+        factory.delegate = self
+        questionFactory = factory
+        factory.requestNextQuestion()
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -114,20 +116,23 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         alertPresenter.show(in: self, model: model)
     }
-
-    func makeResultsMessage() -> String {
+    
+    private func makeResultsMessage() -> String {
         statisticService.store(correct: correctAnswers, total: questionsAmount)
-        let currentRecord = "\(statisticService.bestGame.bestGameCorrect)/\(statisticService.bestGame.bestGameTotal)"
-        let totalCount = "\(statisticService.gamesCount)"
-        let recordTime = statisticService.bestGame.bestGameDate.dateTimeString
+        
+        let bestGame = statisticService.bestGame
+        let currentGameScore = "\(correctAnswers)/\(questionsAmount)"
+        let bestGameScore = "\(bestGame.bestGameCorrect)/\(bestGame.bestGameTotal)"
+        let bestGameDate = bestGame.bestGameDate.dateTimeString
+        let gamesCount = statisticService.gamesCount
         let accuracy = String(format: "%.2f", statisticService.totalAccuracy)
-        let text = """
-            Ваш результат: \(correctAnswers)/\(questionsAmount)
-            Количество сыгранных квизов: \(totalCount)
-            Рекорд: \(currentRecord) (\(recordTime))
-            Средняя точность: \(accuracy)%
-            """
-        return text
+        
+        return """
+        Ваш результат: \(currentGameScore)
+        Количество сыгранных квизов: \(gamesCount)
+        Рекорд: \(bestGameScore) (\(bestGameDate))
+        Средняя точность: \(accuracy)%
+        """
     }
     
     private func restartGame() {
